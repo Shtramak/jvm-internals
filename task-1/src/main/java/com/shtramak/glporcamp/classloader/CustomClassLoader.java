@@ -20,7 +20,7 @@ public class CustomClassLoader extends ClassLoader {
     }
 
     private byte[] bytesFromClassFile(String className) {
-        Path path = getPathFromClassName(className);
+        Path path = pathFromClassName(className);
         try {
             return Files.readAllBytes(path);
         } catch (IOException e) {
@@ -28,16 +28,12 @@ public class CustomClassLoader extends ClassLoader {
         }
     }
 
-    private Path getPathFromClassName(String className) {
+    private Path pathFromClassName(String className) {
         String resourseName = className.replace(".", "/") + ".class";
         URL url = getClass().getClassLoader().getResource(resourseName);
         if (url == null) {
-            url = getClass().getClassLoader().getResource(resourseName);
-            if (url == null) {
                 String message = String.format("Class %s not found", className);
-                throw new ClassCastException(message);
-            }
-
+                throw new RuntimeException(message);
         }
 
         try {
