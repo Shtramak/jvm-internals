@@ -1,9 +1,11 @@
 package com.shtramak.glprocamp;
 
+import com.shtramak.glprocamp.exception.CustomException;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
@@ -11,23 +13,25 @@ import org.openjdk.jmh.annotations.Warmup;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @State(Scope.Benchmark)
+@Fork(value = 1, warmups = 1)
+@BenchmarkMode(Mode.AverageTime)
+@OutputTimeUnit(TimeUnit.MICROSECONDS)
+@Warmup(iterations = 3)
 public class MyBenchmark {
     private static List<Integer> list;
 
     static {
-        list = IntStream.generate(ThreadLocalRandom.current()::nextInt).limit(1000)
+        list = IntStream.generate(ThreadLocalRandom.current()::nextInt).limit(100)
                 .boxed()
                 .collect(Collectors.toList());
     }
 
-    @Fork(value = 1, warmups = 1)
     @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    @Warmup(iterations = 5)
     public List<Integer> methodwithLoop() {
         List<Integer> evenNumbers = new ArrayList<>();
         for (Integer integer : list) {
@@ -38,20 +42,14 @@ public class MyBenchmark {
         return evenNumbers;
     }
 
-    @Fork(value = 1, warmups = 1)
     @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    @Warmup(iterations = 5)
     public List<Integer> methodWithStream() {
         return list.stream()
                 .filter(num -> num % 2 == 0)
                 .collect(Collectors.toList());
     }
 
-    @Fork(value = 1, warmups = 1)
     @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    @Warmup(iterations = 5)
     public List<Integer> methodWithStreamParallel() {
         return list.stream()
                 .parallel()
@@ -59,10 +57,7 @@ public class MyBenchmark {
                 .collect(Collectors.toList());
     }
 
-    @Fork(value = 1, warmups = 1)
     @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    @Warmup(iterations = 5)
     public List<Integer> methodwithMapToIntStream() {
         return list.stream()
                 .mapToInt(Integer::intValue)
@@ -71,10 +66,7 @@ public class MyBenchmark {
                 .collect(Collectors.toList());
     }
 
-    @Fork(value = 1, warmups = 1)
     @Benchmark
-    @BenchmarkMode(Mode.Throughput)
-    @Warmup(iterations = 5)
     public List<Integer> methodwithMapToIntStreamParallel() {
         return list.stream()
                 .parallel()
@@ -84,13 +76,37 @@ public class MyBenchmark {
                 .collect(Collectors.toList());
     }
 
-    //todo method throwing and then processing exception with/without stack trace
+    @Benchmark
+    public Integer exceptionWithStackTrace() throws RuntimeException {
+        int value = ThreadLocalRandom.current().nextInt();
+        try {
+            throw new CustomException("And the value is... "+value);
+        } catch (CustomException e) {
+            e.printStackTrace();
+        }
+        return value;
+    }
+
+    @Benchmark
+    public Integer exceptionWithoutStackTrace() throws RuntimeException {
+        int value = ThreadLocalRandom.current().nextInt();
+        try {
+            throw new CustomException("And the value is... "+value);
+        } catch (CustomException e) {
+            // ¯\_(ツ)_/¯
+        }
+        return value;
+    }
+
 }
+
 /*
-Benchmark                                      Mode  Cnt       Score       Error  Units
-MyBenchmark.methodWithStream                  thrpt   20  168701,885 ?  9504,002  ops/s
-MyBenchmark.methodWithStreamParallel          thrpt   20   30766,531 ?   302,672  ops/s
-MyBenchmark.methodwithLoop                    thrpt   20   80543,129 ? 11968,778  ops/s
-MyBenchmark.methodwithMapToIntStream          thrpt   20   89642,592 ?  6390,912  ops/s
-MyBenchmark.methodwithMapToIntStreamParallel  thrpt   20   27919,685 ?   141,199  ops/s
+Benchmark                                     Mode  Cnt     Score      Error  Units
+MyBenchmark.exceptionWithStackTrace           avgt    5  4135,009 ? 1178,758  us/op
+MyBenchmark.exceptionWithoutStackTrace        avgt    5     2,303 ?    0,900  us/op
+MyBenchmark.methodWithStream                  avgt    5     1,139 ?    0,423  us/op
+MyBenchmark.methodWithStreamParallel          avgt    5    25,475 ?    1,134  us/op
+MyBenchmark.methodwithLoop                    avgt    5     1,148 ?    0,573  us/op
+MyBenchmark.methodwithMapToIntStream          avgt    5     2,005 ?    2,460  us/op
+MyBenchmark.methodwithMapToIntStreamParallel  avgt    5    28,287 ?    4,397  us/op
 */
